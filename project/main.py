@@ -1,12 +1,13 @@
-import os
-
+import uuid
 from celery.result import AsyncResult
 from fastapi import Body, FastAPI, Form, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from task import Task
 from celery import Celery
+from db import saveDocument
 
 celery = Celery(__name__)
 celery.config_from_object('celeryconfig')
@@ -25,9 +26,14 @@ def home(request: Request):
 
 @app.post("/tasks", status_code=201)
 def run_task(payload = Body(...)):
-    task_type = payload["type"]
-    task = celery.send_task('create_task',args=[ (int)(task_type) ])
-    return JSONResponse({"task_id": task.id})
+    input = Task(
+        name= 'input',
+        type = payload['type']
+    )
+    id = str(uuid.uuid1())
+    saveDocument(id,input.toJson())
+    result = celery.send_task('create_task',[id])
+    return JSONResponse({"task_id": result.id})
 
 
 @app.get("/tasks/{task_id}")
