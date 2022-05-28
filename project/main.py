@@ -1,10 +1,17 @@
+import os
+
 from celery.result import AsyncResult
 from fastapi import Body, FastAPI, Form, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from celery import Celery
 from worker import create_task
+
+celery = Celery(__name__)
+celery.conf.broker_url = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379")
+celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379")
 
 
 app = FastAPI()
@@ -21,7 +28,7 @@ def home(request: Request):
 @app.post("/tasks", status_code=201)
 def run_task(payload = Body(...)):
     task_type = payload["type"]
-    task = create_task.delay(int(task_type))
+    task = celery.send_task('create_task',args=[ (int)(task_type) ])
     return JSONResponse({"task_id": task.id})
 
 
