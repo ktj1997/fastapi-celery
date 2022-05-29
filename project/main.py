@@ -30,9 +30,7 @@ def run_task(payload = Body(...)):
         name= 'input',
         type = payload['type']
     )
-    id = str(uuid.uuid1())
-    saveDocument(id,input.toJson())
-    result = celery.send_task('create_task',[id])
+    result = celery.send_task('create_task',[input.toJson()])
     return JSONResponse({"task_id": result.id})
 
 
